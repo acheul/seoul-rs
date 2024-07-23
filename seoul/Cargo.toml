@@ -9,6 +9,9 @@ categories = ["data-structures"]
 keywords = ["enum"]
 readme = "../readme.md"
 license = "MIT"
+exclude = [
+  "tests"
+]
 
 [dependencies]
 seoul-derive = { path="../seoul-derive", version="0.2.0" }
