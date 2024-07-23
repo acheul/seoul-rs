@@ -8,12 +8,16 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
   let mut ty = None::<Ident>;
   let mut ty_list: Vec<Expr> = Vec::new();
   let mut list = None::<syn::ExprArray>;
+  let mut has_default = false;
 
   if let Some(attr) = ast.attrs.iter().find(|x| x.path().is_ident("isomorphism")) {
 
     attr.parse_nested_meta(|meta| {
 
-      if meta.path.is_ident("list") {
+      if meta.path.is_ident("has_default") {
+        has_default = true;
+
+      } else if meta.path.is_ident("list") {
         let arg: syn::ExprArray = meta.value()?.parse()?;
         list.replace(arg);
 
@@ -106,11 +110,13 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
       ));
 
       // From
-      if let Some(value) = values.first() {
-        quoted_from_list.get_mut(0).map(|x| x.extend(
-          quote! { #value => #default_format, }
-        ));
-      };
+      if has_default {
+        if let Some(value) = values.first() {
+          quoted_from_list.get_mut(0).map(|x| x.extend(
+            quote! { #value => #default_format, }
+          ));
+        };
+      }
 
     // List ty
     } else if !ty_list.is_empty() {
@@ -119,19 +125,21 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
         quoted_into.extend(
           quote! { #matching_format => #value, }
         );
-        quoted_from.extend(
-          quote! { #value => #default_format, }
-        );
+        if has_default {
+          quoted_from.extend(
+            quote! { #value => #default_format, }
+          );
+        }
       }
     }
 
     // title
     quoted_title.extend(
       if let Some(title) = title {
-        quote! { #matching_format => String::from(#title), }
+        quote! { #matching_format =>  #title, }
       } else {
         let variant_name = &variant.ident.to_string();
-        quote! {#matching_format => String::from(#variant_name), }
+        quote! {#matching_format => #variant_name, }
       }
     );
   };
@@ -140,10 +148,9 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
   // finialize traits
   let mut quoted = TokenStream::new();
 
-  // Ident ty
-  if let Some(ty) = ty {
+  // Into & From
+  let impl_into_from = move |quoted: &mut TokenStream, quoted_into: TokenStream, quoted_from: TokenStream, ty: TokenStream| {
     // Into
-    let quoted_into = quoted_into_list.get(0).unwrap();
     quoted.extend(quote! {
 
       impl<'a> Into<#ty> for &'a #name {
@@ -162,43 +169,8 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
         }
       }
     });
-
     // From
-    let quoted_from = quoted_from_list.get(0).unwrap();
-    quoted.extend(quote! {
-
-      impl From<#ty> for #name {
-        fn from(value: #ty) -> Self {
-          #[allow(unreachable_patterns)]
-          match value {
-            #quoted_from
-            _ => #name::default() // add this one!
-          }
-        }
-      }
-    });
-  // Array ty
-  } else if !ty_list.is_empty() {
-    for (quoted_into, (quoted_from, ty)) in quoted_into_list.iter().zip(quoted_from_list.iter().zip(ty_list.iter())) {
-      // Into
-      quoted.extend(quote! {
-
-        impl<'a> Into<#ty> for &'a #name {
-          fn into(self) -> #ty {
-            match self {
-              #quoted_into
-            }
-          }
-        }
-  
-        impl Into<#ty> for #name {
-          fn into(self) -> #ty {
-            match self {
-              #quoted_into
-            }
-          }
-        }
-      });
+    if has_default {
       quoted.extend(quote! {
 
         impl From<#ty> for #name {
@@ -206,11 +178,31 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
             #[allow(unreachable_patterns)]
             match value {
               #quoted_from
-              _ => #name::default() // add this one!
+              _ => #name::default()
+            }
+          }
+        }
+  
+        impl<'a> From<&'a #ty> for #name {
+          fn from(value: &'a #ty) -> Self {
+            #[allow(unreachable_patterns)]
+            match value {
+              #quoted_from
+              _ => #name::default()
             }
           }
         }
       });
+    }
+  };
+
+  if let Some(ty) = ty {
+    let quoted_into = quoted_into_list.remove(0);
+    let quoted_from = quoted_from_list.remove(0);
+    impl_into_from(&mut quoted, quoted_into, quoted_from, quote! { #ty });
+  } else if !ty_list.is_empty() {
+    for (quoted_into, (quoted_from, ty)) in quoted_into_list.into_iter().zip(quoted_from_list.into_iter().zip(ty_list.into_iter())) {
+      impl_into_from(&mut quoted, quoted_into, quoted_from, quote! { #ty });
     }
   }
 
@@ -232,7 +224,7 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
   // list, title
   quoted.extend(quote! {
     impl Isomorphism for #name {
-      fn title(&self) -> String {
+      fn title(&self) -> &str {
         match self {
           #quoted_title
         }
@@ -245,4 +237,3 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
 
   Ok(quoted.into())
 }
-
