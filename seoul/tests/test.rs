@@ -1,5 +1,4 @@
-#[cfg(test)]
-use crate::*;
+use seoul::*;
 
 #[test]
 fn test_isomorphsim1() {
