@@ -1,14 +1,14 @@
 [package]
 name = "seoul"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Acheul <seoul605.21@gmail.com>"]
 repository = "https://github.com/acheul/seoul-rs"
 description = "trait Isomorphism"
-categories = ["Data structures"]
+categories = ["data-structures"]
 keywords = ["enum"]
-readme = "readme.md"
+readme = "../readme.md"
 license = "MIT"
 
 [dependencies]
-seoul-derive = { path="../seoul-derive", version="0.1.0" }
+seoul-derive = { path="../seoul-derive", version="0.2.0" }
