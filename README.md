@@ -81,3 +81,5 @@ assert_eq!(Into::<CD>::into(-0i8), CD::C);
 ## Dev Log
 * ver.0.2.0
   * `From<T>` implemented only with `has_default` attribute syntax when `Default` is implemented.
+* ver 0.2.1
+  * correct some typos
