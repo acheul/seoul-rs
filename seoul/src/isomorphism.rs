@@ -71,7 +71,6 @@ pub use seoul_derive::Isomorphism;
 /// // fallback to default value of `CD`
 /// assert_eq!(Into::<CD>::into(-0i8), CD::C);
 /// ```
-/// 
 pub trait Isomorphism: Sized {
 
   fn title(&self) -> &str;

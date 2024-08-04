@@ -5,7 +5,8 @@ use proc_macro2::TokenStream as TokenStream;
 use quote::quote;
 use syn::{self, DeriveInput, Data, Fields, Ident, Expr, spanned::Spanned, Result, Error};
 
-/// Derive macro "Isomorphism"
+
+#[doc = include_str!("../../README.md")]
 #[proc_macro_derive(Isomorphism, attributes(isomorphism, into, title))]
 pub fn isomorphism_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let ast = syn::parse(input).unwrap();

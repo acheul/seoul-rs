@@ -37,7 +37,7 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
     })?;
   }
 
-  // either or neight of ty or ty_list
+  // either or neither of ty or ty_list
   if ty.is_some() && !ty_list.is_empty() {
     return Err(Error::new(ast.span(), "To pass Into/From type, should either use format of simple ident or array."));
   }
