@@ -8,7 +8,7 @@ description = "trait Isomorphism - derive macro"
 license = "MIT"
 readme = "../readme.md"
 include = [
-  "../../README.md"
+  "../README.md"
 ]
 
 [lib]
