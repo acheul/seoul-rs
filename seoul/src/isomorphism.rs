@@ -1,6 +1,6 @@
 pub use seoul_derive::Isomorphism;
 
-/// Trait Isomorphism
+/// # Trait Isomorphism
 /// 
 /// * Using derive macro, you can implement
 ///   * trait `Isomorphism`

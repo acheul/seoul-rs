@@ -1,12 +1,24 @@
 mod isomorphism;
 use isomorphism::*;
 
-use proc_macro2::TokenStream as TokenStream;
-use quote::quote;
+mod tuplike;
+use tuplike::*;
+
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, ToTokens};
 use syn::{self, DeriveInput, Data, Fields, Ident, Expr, spanned::Spanned, Result, Error};
 
 
-#[doc = include_str!("../README.md")]
+#[proc_macro_derive(Tuplike)]
+pub fn tuplike_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  let ast = syn::parse(input).unwrap();
+
+  impl_tuplike_macro(&ast)
+    .unwrap_or_else(|err| err.to_compile_error())
+    .into()
+}
+
+
 #[proc_macro_derive(Isomorphism, attributes(isomorphism, into, title))]
 pub fn isomorphism_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let ast = syn::parse(input).unwrap();
