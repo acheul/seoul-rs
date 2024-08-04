@@ -7,9 +7,7 @@ repository = "https://github.com/acheul/seoul-rs"
 description = "trait Isomorphism - derive macro"
 license = "MIT"
 readme = "../readme.md"
-include = [
-  "../README.md"
-]
+
 
 [lib]
 proc-macro = true
