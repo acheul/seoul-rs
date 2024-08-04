@@ -10,8 +10,8 @@ pub fn impl_tuplike_macro(ast: &DeriveInput) -> Result<TokenStream> {
     _ => return Err(Error::new(ast.span(), "Only for Struct type"))
   };
 
-  let mut tuple_token = TokenStream::new();
-  let mut ref_tuple_token = TokenStream::new();
+  let mut tuple_token = TokenStream::new(); // tuple type
+  let mut ref_tuple_token = TokenStream::new(); // ref tuple type
   let mut build_token: TokenStream = TokenStream::new();
   let mut is_tuple_struct = false;
 
@@ -62,6 +62,11 @@ pub fn impl_tuplike_macro(ast: &DeriveInput) -> Result<TokenStream> {
 
   // finalize
   let gen = quote! {
+
+    impl #impl_generics Tuplike for #name #ty_generics #where_clause {
+      type Tuple = #tuple_token;
+    }
+
     impl #impl_generics From<#tuple_token> for #name #ty_generics #where_clause {
       fn from(value: #tuple_token) -> Self {
         #build_token
