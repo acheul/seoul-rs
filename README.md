@@ -112,10 +112,12 @@ let _ab_ref_into: (&u8, &String) = (&ab_).into();
 
 
 ## Dev Log
-* ver.0.2.0
-  * `From<T>` implemented only with `has_default` attribute syntax when `Default` is implemented.
-* ver 0.2.1~2
-  * correct some typos
+```yaml
+- ver.0.2.0
+  - `From<T>` implemented only with `has_default` attribute syntax when `Default` is implemented.
+- ver 0.2.1~2
+  - correct some typos
 
-* ver 0.3.0
-  * Add `Tuplike`.
+- ver 0.3.0
+  - Add `Tuplike`.
+```
