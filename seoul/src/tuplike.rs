@@ -12,7 +12,8 @@ pub use seoul_derive::Tuplike;
 ///   * Hereby, `T` is a tuple format of the struct's fields,
 ///   * and the `R` is a referenced tuple format of them.
 /// 
-/// * The trait `Tuplike` itself doesn't have own methods.
+/// * The trait `Tuplike` has an associated type `Tuple`.
+///   With the derive macro, the tuple format will be assigned for it.
 /// 
 /// # Ex
 /// ```
@@ -25,6 +26,8 @@ pub use seoul_derive::Tuplike;
 ///
 ///  let tuple_: (u8, String) = (0, "string".to_string());
 ///  let ab_: AB = AB { a: 0, b: "string".to_string() };
+/// 
+///  let _: <AB as Tuplike>::Tuple = ab_.clone().into();
 ///
 ///  let ab_into: (u8, String) = ab_.clone().into();
 ///  let tuple_into: AB = tuple_.clone().into();
@@ -37,4 +40,5 @@ pub use seoul_derive::Tuplike;
 /// 
 pub trait Tuplike: Sized {
 
+  type Tuple;
 }

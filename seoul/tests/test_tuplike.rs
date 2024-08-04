@@ -11,6 +11,8 @@ fn test_tuplike1() {
   let tuple_: (u8, String) = (0, "string".to_string());
   let ab_: AB = AB { a: 0, b: "string".to_string() };
 
+  let _: <AB as Tuplike>::Tuple = ab_.clone().into();
+
   let ab_into: (u8, String) = ab_.clone().into();
   let tuple_into: AB = tuple_.clone().into();
 
@@ -28,6 +30,8 @@ fn test_tuplike2() {
 
   let tuple_: (u8, String) = (0, "string".to_string());
   let ab_: AB = AB(0, "string".to_string());
+
+  let _: <AB as Tuplike>::Tuple = ab_.clone().into();
 
   let ab_into: (u8, String) = ab_.clone().into();
   let tuple_into: AB = tuple_.clone().into();
@@ -50,6 +54,8 @@ fn test_tuplike3() {
   let tuple_: (u8, String) = (0, "string".to_string());
   let ab_: AB<String> = AB { a: 0, b: "string".to_string() };
 
+  let _: <AB<String> as Tuplike>::Tuple = ab_.clone().into();
+
   let ab_into: (u8, String) = ab_.clone().into();
   let tuple_into: AB<String> = tuple_.clone().into();
 
@@ -68,6 +74,8 @@ fn test_tuplike4() {
 
   let tuple_: (u8, String) = (0, "string".to_string());
   let ab_: AB<u8, String> = AB { a: 0, b: "string".to_string() };
+
+  let _: <AB<u8, String> as Tuplike>::Tuple = ab_.clone().into();
 
   let ab_into: (u8, String) = ab_.clone().into();
   let tuple_into: AB<u8, String> = tuple_.clone().into();
