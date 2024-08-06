@@ -1,4 +1,4 @@
-#![doc = include_str!("../README.md")]
+//! SEOUL-RS
 
 mod isomorphism;
 pub use isomorphism::Isomorphism;

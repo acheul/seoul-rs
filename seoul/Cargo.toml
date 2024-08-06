@@ -1,17 +1,17 @@
 [package]
 name = "seoul"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2021"
 authors = ["Acheul <seoul605.21@gmail.com>"]
 repository = "https://github.com/acheul/seoul-rs"
 description = "trait Isomorphism"
 categories = ["data-structures"]
-keywords = ["enum"]
+keywords = ["Isomorphism", "Tuplike", "Reflica"]
 readme = "../readme.md"
 license = "MIT"
 exclude = [
-  "tests", "README.md"
+  "tests"
 ]
 
 [dependencies]
-seoul-derive = { path="../seoul-derive", version="0.3.2" }
+seoul-derive = { path="../seoul-derive", version="0.3.3" }
