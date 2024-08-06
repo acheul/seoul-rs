@@ -51,8 +51,12 @@ fn test_reflica2() {
   // Ref2AB delcared
   let _: Ref2ABC<u8> = Ref2ABC::A;
   let _: Ref2ABC<String> = Ref2ABC::B { a: &8, b: &String::from("ab") };
+  let _: Ref2ABC<i32> = Ref2ABC::C(&10);
 
   // check Into<Ref2AB>
+  let x = ABC::A;
+  let _: Ref2ABC<Vec<u8>> = (&x).into();
+
   let x = ABC::B { a: 0, b: String::from("x")};
   let _: Ref2ABC<String> = (&x).into();
 
