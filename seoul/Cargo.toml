@@ -10,7 +10,7 @@ keywords = ["enum"]
 readme = "../readme.md"
 license = "MIT"
 exclude = [
-  "tests"
+  "tests", "README.md"
 ]
 
 [dependencies]
