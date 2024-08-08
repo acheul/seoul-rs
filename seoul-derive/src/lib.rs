@@ -7,10 +7,22 @@ use tuplike::*;
 mod reflica;
 use reflica::*;
 
+mod intowrap;
+use intowrap::*;
+
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{self, DeriveInput, Data, Fields, Ident, Expr, spanned::Spanned, Result, Error};
 
+
+#[proc_macro_derive(IntoWrap)]
+pub fn intowrap_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  let ast = syn::parse(input).unwrap();
+
+  impl_intowrap_macro(&ast)
+    .unwrap_or_else(|err| err.to_compile_error())
+    .into()
+}
 
 #[proc_macro_derive(Reflica, attributes(reflica))]
 pub fn reflica_macro_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

@@ -4,10 +4,12 @@
 [![docs.rs](https://img.shields.io/docsrs/seoul?color=blue&label=docs.rs)](https://docs.rs/seoul)
 
 * derive trait **Isomorphism** for **Enum** data
-* derive trait **Tuplike** for **Struct** data
+* derive trait **Tuplike** for **Struct** and **Enum** data
 * derive trait **Reflica** for **Struct** and **Enum** data
+* derive trait **IntoWrap** for **Enum** data
 
-## Trait Isomorphism
+
+# Trait Isomorphism
 * for **enum** data type. Convenient transformation of enum values with derive macro.
 
 * Basic methods:
@@ -18,13 +20,13 @@
     * `Into<T>` for `Self` and `&Self`
     * `From<T>` and `From<&T>` for `Self` (when `Default` is implemented and "has_default" syntax is given)
 
-### derive syntax and fallback
+## derive syntax and fallback
 * When **title** is not given at variant level, **the variant's name (Ident)** will be used as titile.
 * When **list** is not given at the top level attribute, list of each variant's default format will be returned.
 * When **into** value is not given at variant level, the into type(T)'s default value will be used in `<Into<T>>` trait.
 * When the type implements `Default` and **has_default** is given at top level attribute, the `From<T>` and `From<&T>` will be implemented for each given into types(T). 
 
-### Examples
+## Examples
 ```rust
 use seoul::Isomorphism;
 
@@ -80,20 +82,20 @@ assert_eq!(Into::<CD>::into(-1i8), CD::D);
 assert_eq!(Into::<CD>::into(-0i8), CD::C);
 ```
 
-## Trait Tuplike
+# Trait Tuplike
 * for **struct** data type. Transform a **struct** data into **tuple** format
   * `AB { a: 0, b: 10 }` <=> `(0, 10)`
 
 * Using derive macro, you can implement
   * trait `From<T>` for `Self`
   * trait `Into<T>` for `Self`
-  * trait `Into<R>` for `Self`
+  * trait `Into<R>` for `&Self`
   * Hereby, `T` is a tuple format of the struct's fields,
   * and the `R` is a referenced tuple format of them.
 
-* The trait `Tuplike` has an associated type `Tuple`. With the derive macro, the tuple format will be assigned for it.
+* for the **enum** data type, Only `From<T>` trait will be implemted for each variant.
 
-### Example
+## Example
 ```rust
 use seoul::Tuplike;
 
@@ -105,8 +107,6 @@ struct AB {
 let tuple_: (u8, String) = (0, "string".to_string());
 let ab_: AB = AB { a: 0, b: "string".to_string() };
 
-let _: <AB as Tuplike>::Tuple = ab_.clone().into();
-
 let ab_into: (u8, String) = ab_.clone().into();
 let tuple_into: AB = tuple_.clone().into();
 
@@ -114,21 +114,45 @@ assert_eq!(&ab_into, &tuple_);
 assert_eq!(&tuple_into, &ab_);
 
 let _ab_ref_into: (&u8, &String) = (&ab_).into();
+
+
+// for enum, just `From<T>` will be implemented for each variant.
+#[derive(Debug, Clone, PartialEq, Tuplike)]
+enum ABC {
+  A,
+  B(String),
+  C { a: i32, b: String }
+}
+
+let _ = ABC::A;
+
+let b1: (String,) = ("string".to_string(),);
+let b2: ABC = ABC::B("string".to_string());
+
+let b1_: ABC = b1.clone().into();
+
+assert_eq!(&b1_, &b2);
+
+let c1: (i32, String) = (10, "string".to_string());
+let c2: ABC = ABC::C { a: 10, b: "string".to_string() };
+let c1_: ABC = c1.clone().into();
+
+assert_eq!(&c1_, &c2);
 ```
 
-## Trait Reflica
+# Trait Reflica
 * Declare a borrowed fields' data type ("reflica") from an original struct/enum data type, and implement Into trait to the reflica.
 
 * concept of reflica:
-  * `struct AB { a: u8, b: String }`
+  * `struct AB { a: u8, b: String }` ->
     * declare `struct RefAB<'a> { a: &'a u8, b: &'a String }`
     * implement `Into<RefAB<'a>> for &'a AB`  
- * `enum AB { A, B { a: u8, b: String } }`
+  * `enum AB { A, B { a: u8, b: String } }` ->
     * declare `enum RefAB<'a> { A, B { a: &'a u8, b: &'a String } }`
     * implement `Into<RefAB<'a>> for &'a AB`
 
 
-### Example
+## Example
 ```rust
 use seoul::Reflica;
 
@@ -181,6 +205,64 @@ let _: Ref2ABC<u8> = (&x).into();
 ```
 
 
+# Trait IntoWrap
+* Implement `From` traits for each variants of an **enum** type data,
+  where transforming field's data into the enum data
+  when the variant has one unnamed field.
+
+* Thus each variants should not have any redundant type or generic to avoid any conflicting implementations.
+
+* `IntoWrap` can be though as a not-tuple single variable version of `Tuplike` for enum's wrapping variants.
+
+## Example
+```rust
+use seoul::IntoWrap;
+
+#[derive(Debug, Clone, PartialEq, IntoWrap)]
+enum ABCD {
+  A, // skip
+  B(i32), // impl From<i32> for ABCD
+  C { a: i32 }, // skip
+  D(String) // impl From<String> for ABCD
+}
+
+let _ = ABCD::A;
+let _ = ABCD::C { a: 10 };
+
+let b: i32 = 10;
+let b: ABCD = b.into();
+
+let d = "string".to_string();
+let d: ABCD = d.into();
+
+assert_eq!(b, ABCD::B(10));
+assert_eq!(d, ABCD::D("string".to_string()));
+
+
+#[derive(Debug, Clone, PartialEq, IntoWrap)]
+enum AB<X: Clone, Y> where Y: Clone {
+  A((X, X)), // impl<X: Clone, Y> From<X, X> for AB where Y: Clone
+  B(Vec<Y>) // impl<X: Clone, Y> From<Vec<X>> for AB where Y: Clone
+}
+
+let a: (String, String) = ("x".to_string(), "x".to_string());
+let a: AB<String, i32> = a.into();
+
+let b: Vec<i32> = vec![0, 1, 2];
+let b: AB<String, i32> = b.into();
+
+assert_eq!(a, AB::<String, i32>::A(("x".to_string(), "x".to_string())));
+assert_eq!(b, AB::<String, i32>::B(vec![0, 1, 2]));
+
+
+// This case won't work due to conflicting implementations.
+/*#[derive(Debug, Clone, PartialEq, IntoWrap)]
+enum AB<X: Clone, Y> where Y: Clone {
+  A(X),
+  B(Vec<Y>)
+}*/
+```
+
 ## Dev Log
 ```yaml
 - ver.0.2.0
@@ -195,4 +277,10 @@ let _: Ref2ABC<u8> = (&x).into();
 
 - ver 0.3.2
   - Add `Reflica`
+
+- ver 0.3.3
+  - `Tuplike`:
+    - delete associated type `Tuple` from the trait.
+    - derive macro now works on the enum type too: but only `From<T>` trait will be implemented for each variant.
+  - Add `IntoWrap`
 ```

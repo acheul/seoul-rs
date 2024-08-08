@@ -6,10 +6,10 @@ pub use seoul_derive::Reflica;
 * Declare a borrowed fields' data type ("reflica") from an original struct/enum data type, and implement Into trait to the reflica.
 
 * concept of reflica:
-  * `struct AB { a: u8, b: String }`
+  * `struct AB { a: u8, b: String }` ->
     * declare `struct RefAB<'a> { a: &'a u8, b: &'a String }`
     * implement `Into<RefAB<'a>> for &'a AB`  
- * `enum AB { A, B { a: u8, b: String } }`
+  * `enum AB { A, B { a: u8, b: String } }` ->
     * declare `enum RefAB<'a> { A, B { a: &'a u8, b: &'a String } }`
     * implement `Into<RefAB<'a>> for &'a AB`
 
