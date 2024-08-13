@@ -4,6 +4,17 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
 
   let name = &ast.ident;
 
+  // parsing generics (add 'a lifetime for ref type)
+  let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+  let (impl_generics, ty_generics, where_clause) = (&impl_generics, &ty_generics, &where_clause);
+
+  let mut gen_clone = ast.generics.clone();
+  let lt = syn::Lifetime::new("'a", Span::call_site());
+  let ltp = syn::LifetimeParam::new(lt);
+  gen_clone.params.push(syn::GenericParam::from(ltp));
+  
+  let (ref_impl_generics, _ref_ty_generics, ref_where_clause) = gen_clone.split_for_impl();
+
   // top level attrs
   let mut ty = None::<Ident>;
   let mut ty_list: Vec<Expr> = Vec::new();
@@ -44,6 +55,17 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
 
   // get enum data
   let data = match &ast.data {
+    // struct => just impl Isomorphism trait
+    Data::Struct(_) => {
+      let gen = quote! {
+        impl #impl_generics Isomorphism for #name #ty_generics #where_clause {
+          fn title(&self) -> &str { "" }
+          fn list() -> Vec<Self> { Vec::new() }
+        }
+      };
+      return Ok(gen.into());
+    },
+    // enum
     Data::Enum(data) => {
       data
     },
@@ -146,14 +168,14 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
 
 
   // finialize traits
-  let mut quoted = TokenStream::new();
+  let mut quoted: TokenStream = TokenStream::new();
 
   // Into & From
   let impl_into_from = move |quoted: &mut TokenStream, quoted_into: TokenStream, quoted_from: TokenStream, ty: TokenStream| {
     // Into
     quoted.extend(quote! {
 
-      impl<'a> Into<#ty> for &'a #name {
+      impl #ref_impl_generics Into<#ty> for &'a #name #ty_generics #ref_where_clause {
         fn into(self) -> #ty {
           match self {
             #quoted_into
@@ -161,7 +183,7 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
         }
       }
 
-      impl Into<#ty> for #name {
+      impl #impl_generics Into<#ty> for #name #ty_generics #where_clause {
         fn into(self) -> #ty {
           match self {
             #quoted_into
@@ -173,7 +195,7 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
     if has_default {
       quoted.extend(quote! {
 
-        impl From<#ty> for #name {
+        impl #impl_generics From<#ty> for #name #ty_generics #where_clause {
           fn from(value: #ty) -> Self {
             #[allow(unreachable_patterns)]
             match value {
@@ -183,7 +205,7 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
           }
         }
   
-        impl<'a> From<&'a #ty> for #name {
+        impl #ref_impl_generics From<&'a #ty> for #name #ty_generics #where_clause {
           fn from(value: &'a #ty) -> Self {
             #[allow(unreachable_patterns)]
             match value {
@@ -223,7 +245,7 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
 
   // list, title
   quoted.extend(quote! {
-    impl Isomorphism for #name {
+    impl #impl_generics Isomorphism for #name #ty_generics #where_clause {
       fn title(&self) -> &str {
         match self {
           #quoted_title

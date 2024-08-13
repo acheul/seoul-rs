@@ -1,7 +1,7 @@
 use seoul::*;
 
 #[test]
-fn test_isomorphsim1() {
+fn test_isomorphism1() {
 
   #[derive(PartialEq, Debug, Isomorphism)]
   #[isomorphism(u8, list=[A, B(10)])]
@@ -63,7 +63,7 @@ fn test_isomorphsim1() {
 }
 
 #[test]
-fn test_isomorphsim2() {
+fn test_isomorphism2() {
 
   // use alias type to prevent derive macro's parsing error when the type's raw name has white space;
   type StaticStr = &'static str;
@@ -85,4 +85,37 @@ fn test_isomorphsim2() {
 
   let c: &str = c.into();
   assert_eq!(c, "c");
+}
+
+/// parsing generics
+#[test]
+fn test_isomorphism3() {
+
+  #[derive(Debug, PartialEq, Isomorphism)]
+  #[isomorphism(u8)]
+  pub enum AB<X: Default> {
+    #[into(0)] A(X),
+    #[into(1)] B(String)
+  }
+
+  let x: AB<String> = AB::A("A".to_string());
+  assert_eq!(Into::<u8>::into(&x), 0);
+  assert_eq!(x.title(), "A");
+
+  let x: AB<i32> = AB::B("B".to_string());
+  assert_eq!(Into::<u8>::into(&x), 1);
+  assert_eq!(x.title(), "B");
+}
+
+
+/// on Struct type
+#[test]
+fn test_isomorphism4() {
+
+  #[derive(Debug, Default, PartialEq, Isomorphism)]
+  pub struct AB { _a: String, _b: i32 }
+
+  let x = AB::default();
+  assert!(x.title().is_empty());
+  assert!(AB::list().is_empty());
 }

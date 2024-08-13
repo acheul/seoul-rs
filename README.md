@@ -279,8 +279,13 @@ enum AB<X: Clone, Y> where Y: Clone {
   - Add `Reflica`
 
 - ver 0.3.3
-  - `Tuplike`:
+  - On `Tuplike`:
     - delete associated type `Tuple` from the trait.
     - derive macro now works on the enum type too: but only `From<T>` trait will be implemented for each variant.
   - Add `IntoWrap`
+
+- ver 0.3.5
+  - On `Isomorphism`:
+    - Reinforced derive macro's generic parsing ability.
+    - For struct type, the derive macro would only implement the Isormophism trait with each methods of it returning default values.
 ```
