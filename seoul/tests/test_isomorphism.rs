@@ -119,3 +119,31 @@ fn test_isomorphism4() {
   assert!(x.title().is_empty());
   assert!(AB::list().is_empty());
 }
+
+
+
+trait XX: Clone { }
+impl XX for u8 { }
+
+#[test]
+fn test_isomorphism_temp1() {
+
+  #[derive(Debug, Clone, PartialEq, Isomorphism)]
+  #[isomorphism(into=[u8, bool], list=[])]
+  pub enum Factor<I: XX> {
+    #[into([0, true])]
+    Document,
+    #[into([1, false])]
+    Paragraph(I),
+  }
+
+  let x: Factor<u8> = Factor::Document;
+  let _ = Into::<bool>::into(&x);
+
+  impl<I: XX> Factor<I> {
+    fn xx(&self) -> bool {
+      // self.into();
+      Into::<bool>::into(self)
+    }
+  }
+}
