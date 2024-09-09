@@ -116,7 +116,7 @@ pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
     // Into, From
     if !ty_list.is_empty() {
       if ty_list.len() != values.len() {
-        return Err(Error::new(ast.span(), "Using Into/From type arrays, should not abbreviate values."));
+        return Err(Error::new(ast.span(), "Using Into/From type arrays, should not omit values."));
       }
     }
 

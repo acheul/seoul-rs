@@ -288,4 +288,9 @@ enum AB<X: Clone, Y> where Y: Clone {
   - On `Isomorphism`:
     - Reinforced derive macro's generic parsing ability.
     - For struct type, the derive macro would only implement the Isormophism trait with each methods of it returning default values.
+
+- ver 0.3.6
+  - crate `seoul-derive`:
+    - a bit revision of error comments;
+  - On `Reflica`: copy visibility of a type and fields; (pub, pub(crate), etc.)
 ```

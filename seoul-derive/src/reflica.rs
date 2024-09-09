@@ -51,11 +51,10 @@ pub fn impl_reflica_macro(ast: &DeriveInput) -> Result<TokenStream> {
   gen_clone.params.push(syn::GenericParam::from(ltp));
   
   let (ref_impl_generics, ref_ty_generics, ref_where_clause) = gen_clone.split_for_impl();
-
+  let vis = ast.vis.to_token_stream();
 
   // for each data type 
   match &ast.data {
-
     // struct
     Data::Struct(data) => {
       let (is_named, mut ref_fields, match_fields) = get_ref_fields(&data.fields);
@@ -70,7 +69,7 @@ pub fn impl_reflica_macro(ast: &DeriveInput) -> Result<TokenStream> {
 
         // declare ref type
         #derive_quote
-        pub struct #ref_name #ref_impl_generics #where_clause
+        #vis struct #ref_name #ref_impl_generics #where_clause
         #ref_fields
       
         // Into
@@ -109,7 +108,7 @@ pub fn impl_reflica_macro(ast: &DeriveInput) -> Result<TokenStream> {
 
         // declare ref type
         #derive_quote
-        pub enum #ref_name #ref_impl_generics #where_clause
+        #vis enum #ref_name #ref_impl_generics #where_clause
         { #ref_variants }
         
         // Into
@@ -144,12 +143,14 @@ pub fn get_ref_fields(fields: &Fields) -> (bool, TokenStream, TokenStream) {
     Fields::Named(fields) => {
       let len = fields.named.len();
       for (i, field) in fields.named.iter().enumerate() {
+
+        let vis = field.vis.to_token_stream();
         let name = field.ident.as_ref().unwrap();
         let ty = field.ty.to_token_stream();
         quote.extend( if i+1==len {
-          quote! { #name: &'a #ty }
+          quote! { #vis #name: &'a #ty }
         } else {
-          quote! { #name: &'a #ty, }
+          quote! { #vis #name: &'a #ty, }
         });
 
         quote2.extend(if i+1==len { quote! { #name } } else { quote! { #name, } });
@@ -161,11 +162,12 @@ pub fn get_ref_fields(fields: &Fields) -> (bool, TokenStream, TokenStream) {
     Fields::Unnamed(fields) => {
       let len = fields.unnamed.len();
       for (i, field) in fields.unnamed.iter().enumerate() {
+        let vis = field.vis.to_token_stream();
         let ty = field.ty.to_token_stream();
         quote.extend( if i+1==len {
-          quote! { &'a #ty }
+          quote! { #vis &'a #ty }
         } else {
-          quote! { &'a #ty, }
+          quote! { #vis &'a #ty, }
         });
 
         let name_ = format!("f{}", i);
