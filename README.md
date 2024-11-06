@@ -214,6 +214,8 @@ let _: Ref2ABC<u8> = (&x).into();
 
 * `IntoWrap` can be though as a not-tuple single variable version of `Tuplike` for enum's wrapping variants.
 
+* Since v0.3.7 it supports a struct data with one field.
+
 ## Example
 ```rust
 use seoul::IntoWrap;
@@ -261,6 +263,19 @@ enum AB<X: Clone, Y> where Y: Clone {
   A(X),
   B(Vec<Y>)
 }*/
+
+// for struct
+#[derive(Debug, Clone, PartialEq, IntoWrap)]
+struct ExStruct(String);
+
+let _x: ExStruct = String::from("ab").into();
+
+#[derive(Debug, Clone, PartialEq, IntoWrap)]
+struct ExStruct2<X: Clone> {
+  a: X
+}
+
+let _x: ExStruct2<String> = String::from("ab").into();
 ```
 
 ## Dev Log
