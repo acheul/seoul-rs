@@ -1,6 +1,6 @@
 [package]
 name = "seoul"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2021"
 authors = ["Acheul <seoul605.21@gmail.com>"]
 repository = "https://github.com/acheul/seoul-rs"

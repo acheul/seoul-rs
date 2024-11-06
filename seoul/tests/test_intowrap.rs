@@ -46,4 +46,18 @@ fn test_intowrap() {
     A(X),
     B(Vec<Y>)
   }*/
+
+
+  // for struct
+  #[derive(Debug, Clone, PartialEq, IntoWrap)]
+  struct ExStruct(String);
+
+  let _x: ExStruct = String::from("ab").into();
+
+  #[derive(Debug, Clone, PartialEq, IntoWrap)]
+  struct ExStruct2<X: Clone> {
+    a: X
+  }
+
+  let _x: ExStruct2<String> = String::from("ab").into();
 }

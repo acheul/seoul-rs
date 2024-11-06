@@ -293,4 +293,7 @@ enum AB<X: Clone, Y> where Y: Clone {
   - crate `seoul-derive`:
     - a bit revision of error comments;
   - On `Reflica`: copy visibility of a type and fields; (pub, pub(crate), etc.)
+
+- ver 0.3.7
+  - On `IntoWrap`: now works on not only Enum but also Struct datas which have just one field.
 ```

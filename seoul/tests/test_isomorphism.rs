@@ -130,7 +130,7 @@ fn test_isomorphism_temp1() {
 
   #[derive(Debug, Clone, PartialEq, Isomorphism)]
   #[isomorphism(into=[u8, bool], list=[])]
-  pub enum Factor<I: XX> {
+  enum Factor<I: XX> {
     #[into([0, true])]
     Document,
     #[into([1, false])]
