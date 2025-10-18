@@ -1,261 +1,184 @@
 use crate::*;
-
-pub fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
-
-  let name = &ast.ident;
-
-  // parsing generics (add 'a lifetime for ref type)
-  let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-  let (impl_generics, ty_generics, where_clause) = (&impl_generics, &ty_generics, &where_clause);
-
-  let mut gen_clone = ast.generics.clone();
-  let lt = syn::Lifetime::new("'a", Span::call_site());
-  let ltp = syn::LifetimeParam::new(lt);
-  gen_clone.params.push(syn::GenericParam::from(ltp));
-  
-  let (ref_impl_generics, _ref_ty_generics, ref_where_clause) = gen_clone.split_for_impl();
-
-  // top level attrs
-  let mut ty = None::<Ident>;
-  let mut ty_list: Vec<Expr> = Vec::new();
-  let mut list = None::<syn::ExprArray>;
-  let mut has_default = false;
-
-  if let Some(attr) = ast.attrs.iter().find(|x| x.path().is_ident("isomorphism")) {
-
-    attr.parse_nested_meta(|meta| {
-
-      if meta.path.is_ident("has_default") {
-        has_default = true;
-
-      } else if meta.path.is_ident("list") {
-        let arg: syn::ExprArray = meta.value()?.parse()?;
-        list.replace(arg);
-
-      } else if meta.path.is_ident("into") {
-        let args: syn::ExprArray = meta.value()?.parse()?;
-        for arg in args.elems.into_iter() {
-          ty_list.push(arg);
-        }
-
-      } else if let Some(arg) = meta.path.get_ident().map(|x| x.clone()) {
-          ty.replace(arg);
-
-      } else {
-        return Err(Error::new(ast.span(), "Top level 'isomorphism' attribute has argments of list or Into/From type."));
-      }
-      Ok(())
-    })?;
-  }
-
-  // either or neither of ty or ty_list
-  if ty.is_some() && !ty_list.is_empty() {
-    return Err(Error::new(ast.span(), "To pass Into/From type, should either use format of simple ident or array."));
-  }
-
-  // get enum data
-  let data = match &ast.data {
-    // struct => just impl Isomorphism trait
-    Data::Struct(_) => {
-      let gen = quote! {
-        impl #impl_generics Isomorphism for #name #ty_generics #where_clause {
-          fn title(&self) -> &str { "" }
-          fn list() -> Vec<Self> { Vec::new() }
-        }
-      };
-      return Ok(gen.into());
-    },
-    // enum
-    Data::Enum(data) => {
-      data
-    },
-    _ => return Err(Error::new(ast.span(), "Only for Enum data type.")),
-  };
-
-  // fallback list
-  let mut fallback_list: Option<TokenStream> = if list.is_none() { Some(TokenStream::new()) } else { None };
-
-  // build TokenStream touring each variants
-
-  let len = if ty.is_some() {1} else {ty_list.len()};
-  let mut quoted_into_list: Vec<TokenStream> = (0..len).map(|_| TokenStream::new()).collect();
-  let mut quoted_from_list: Vec<TokenStream> = (0..len).map(|_| TokenStream::new()).collect();
-  let mut quoted_title  = TokenStream::new();
+mod fields;
+mod variants;
 
 
-  for variant in data.variants.iter() {
+pub(super) fn impl_isomorphism_macro(ast: &DeriveInput) -> Result<TokenStream> {
 
-    let matching_format = variant_matching_format(name, variant)?;
-    let default_format = variant_default_format(name, variant)?;
+    let mut gen = TokenStream::new();
 
-    fallback_list.as_mut().map(|x| x.extend(quote! { #default_format, }));
+    // parsing generics
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    
+    // Get lifetime added impl_generics
+    let lifetime: syn::Lifetime = syn::Lifetime::new("'iso", Span::call_site());
 
-    let mut values: Vec<Expr> = Vec::new();
-    let mut title = None::<Expr>;
+    let mut _generics = ast.generics.clone();
+    let (ref_impl_generics, ..) = {
+        let ltp = syn::LifetimeParam::new(lifetime.clone());
+        _generics.params.push(syn::GenericParam::from(ltp));
 
-    for attr in variant.attrs.iter() {
-
-      if attr.path().is_ident("into") {
-        if ty.is_some() {
-          let arg: Expr = attr.parse_args()?;
-          values.push(arg);
-        
-        } else if !ty_list.is_empty() {
-          let args: syn::ExprArray = attr.parse_args()?;
-          for arg in args.elems.into_iter() {
-            values.push(arg);
-          }
-        }
-
-      } else if attr.path().is_ident("title") {
-        let arg: Expr = attr.parse_args()?;
-        title.replace(arg);
-      }
+        _generics.split_for_impl()
     };
 
-    // Into, From
-    if !ty_list.is_empty() {
-      if ty_list.len() != values.len() {
-        return Err(Error::new(ast.span(), "Using Into/From type arrays, should not omit values."));
-      }
-    }
 
-    // Ident ty
-    if let Some(ty) = ty.as_ref() {
-      // Into
-      quoted_into_list.get_mut(0).map(|x| x.extend(
-        if let Some(value) = values.first() {
-          quote! { #matching_format => #value, }
-        } else {
-          quote! { #matching_format => #ty::default(), }
-        }
-      ));
+    // 1. Container attributes
 
-      // From
-      if has_default {
-        if let Some(value) = values.first() {
-          quoted_from_list.get_mut(0).map(|x| x.extend(
-            quote! { #value => #default_format, }
-          ));
-        };
-      }
+    let mut into_field = false;
+    let mut intofrom_tuple = false;
 
-    // List ty
-    } else if !ty_list.is_empty() {
-      for (quoted_into, (quoted_from, value)) in quoted_into_list.iter_mut().zip(quoted_from_list.iter_mut().zip(values.iter())) {
-        // Into
-        quoted_into.extend(
-          quote! { #matching_format => #value, }
-        );
-        if has_default {
-          quoted_from.extend(
-            quote! { #value => #default_format, }
-          );
-        }
-      }
-    }
+    let mut from_variant = false;
+    let mut name_variant_method = None::<String>;
+    
+    let mut into_type = None::<Expr>;
+    let mut default_into_value = None::<Expr>;
+    let mut skip_restore = false;
+    let mut skip_ref_restore = false;
+    let mut restore_panic = None::<String>;
+    let mut default_restore_value = None::<Expr>;
 
-    // title
-    quoted_title.extend(
-      if let Some(title) = title {
-        quote! { #matching_format =>  #title, }
-      } else {
-        let variant_name = &variant.ident.to_string();
-        quote! {#matching_format => #variant_name, }
-      }
-    );
-  };
+    
+    if let Some(attr) = ast.attrs.iter().find(|attr| attr.path().is_ident("isomorphism"))
+    {
+        attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("into_field") {
+                into_field = true;
+            } else if meta.path.is_ident("intofrom_tuple") {
+                intofrom_tuple = true;
 
+            } else if meta.path.is_ident("from_variant") {
+                from_variant = true;
+            } else if meta.path.is_ident("name_variant") {
+                let method_name = if let Ok(x) = meta.value() {
+                    x.parse::<syn::LitStr>()?.value()
+                } else {
+                    "name".to_string()
+                };
+                name_variant_method.replace(method_name);
 
-  // finialize traits
-  let mut quoted: TokenStream = TokenStream::new();
+            } else if meta.path.is_ident("into") {
+                let expr = meta.value()?.parse::<Expr>()?;
+                into_type.replace(expr);
+            } else if meta.path.is_ident("default_into") {
+                let expr = meta.value()?.parse::<Expr>()?;
+                default_into_value.replace(expr);
+            } else if meta.path.is_ident("skip_restore") {
+                skip_restore = true;
+            } else if meta.path.is_ident("skip_ref_restore") {
+                skip_ref_restore = true;
+            } else if meta.path.is_ident("restore_panic") {
+                let lit = meta.value()?.parse::<syn::LitStr>()?;
+                restore_panic.replace(lit.value());
 
-  // Into & From
-  let impl_into_from = move |quoted: &mut TokenStream, quoted_into: TokenStream, quoted_from: TokenStream, ty: TokenStream| {
-    // Into
-    quoted.extend(quote! {
-
-      impl #ref_impl_generics Into<#ty> for &'a #name #ty_generics #ref_where_clause {
-        fn into(self) -> #ty {
-          match self {
-            #quoted_into
-          }
-        }
-      }
-
-      impl #impl_generics Into<#ty> for #name #ty_generics #where_clause {
-        fn into(self) -> #ty {
-          match self {
-            #quoted_into
-          }
-        }
-      }
-    });
-    // From
-    if has_default {
-      quoted.extend(quote! {
-
-        impl #impl_generics From<#ty> for #name #ty_generics #where_clause {
-          fn from(value: #ty) -> Self {
-            #[allow(unreachable_patterns)]
-            match value {
-              #quoted_from
-              _ => #name::default()
+            } else if meta.path.is_ident("default_restore") {
+                let expr = meta.value()?.parse::<Expr>()?;
+                default_restore_value.replace(expr);
+            
+            } else {
+                let x = meta.path.get_ident().map(|ident| ident.to_string());
+                return Err(Error::new(ast.span(), &format!("Isomorphism: Path {:?} is not allowed for attribute Isomorphism.", x)));
             }
-          }
-        }
-  
-        impl #ref_impl_generics From<&'a #ty> for #name #ty_generics #where_clause {
-          fn from(value: &'a #ty) -> Self {
-            #[allow(unreachable_patterns)]
-            match value {
-              #quoted_from
-              _ => #name::default()
+            Ok(())
+        })?;
+    }
+    
+
+    // 2. On each field/variant.
+    match &ast.data {
+        // 1) On fields
+        Data::Struct(data) => {
+            let _ = fields::handle_fields(
+                &data.fields, into_field, intofrom_tuple,
+                ast, &impl_generics, &ty_generics, &where_clause,
+                &ref_impl_generics,
+                &mut gen, &lifetime
+            )?;
+        },
+
+        // 2) On Enum
+        Data::Enum(data) => {
+            
+            if into_field {
+                return Err(Error::new(ast.span(), "Isomorphism: `into_field` attribute is not for Enum data type.")); 
+            } else if intofrom_tuple {
+                return Err(Error::new(ast.span(), "Isomorphism: `intofrom_tuple` attribute is not for Enum data type.")); 
             }
-          }
+
+            let _ = variants::handle_variants(
+                &data.variants,
+                from_variant, name_variant_method, 
+                into_type, default_into_value, skip_restore, skip_ref_restore, restore_panic, default_restore_value,                
+                ast, &impl_generics, &ty_generics, &where_clause, &ref_impl_generics, 
+                &mut gen, &lifetime
+            )?;
+        },
+
+        // 3) On Union:
+        Data::Union(_) => {
+            return Err(Error::new(ast.span(), "Cannot implement for Union data type."));
+        },
+    }
+
+    Ok(gen.into())
+}
+
+
+// Common helpers
+fn fields_default_format(fields: &syn::Fields) -> TokenStream {
+    let quoted = match fields {
+        Fields::Named(fields) => {
+            let mut quoted = TokenStream::new();
+            let len = fields.named.len();
+
+            for (i, field) in fields.named.iter().enumerate() {
+                let name = field.ident.as_ref().unwrap();
+                let x = if i + 1 == len {
+                    quote! { #name: Default::default() }
+                } else {
+                    quote! { #name: Default::default(), }
+                };
+                quoted.extend(x);
+            }
+
+            quote! {
+              {#quoted}
+            }
         }
-      });
-    }
-  };
+        Fields::Unnamed(fields) => {
+            let mut quoted = TokenStream::new();
+            let len = fields.unnamed.len();
 
-  if let Some(ty) = ty {
-    let quoted_into = quoted_into_list.remove(0);
-    let quoted_from = quoted_from_list.remove(0);
-    impl_into_from(&mut quoted, quoted_into, quoted_from, quote! { #ty });
-  } else if !ty_list.is_empty() {
-    for (quoted_into, (quoted_from, ty)) in quoted_into_list.into_iter().zip(quoted_from_list.into_iter().zip(ty_list.into_iter())) {
-      impl_into_from(&mut quoted, quoted_into, quoted_from, quote! { #ty });
-    }
-  }
+            for (i, _field) in fields.unnamed.iter().enumerate() {
+                let x = if i + 1 == len {
+                    quote! { Default::default() }
+                } else {
+                    quote! { Default::default(), }
+                };
+                quoted.extend(x);
+            }
 
-  // Isomorphism trait
-
-  // list
-  let mut quoted_list = TokenStream::new();
-
-  if let Some(list) = list {
-    for expr in list.elems.iter() {
-      quoted_list.extend(
-        quote! { Self::#expr, }
-      );
-    }
-  } else {
-    quoted_list = fallback_list.unwrap();
-  }
-
-  // list, title
-  quoted.extend(quote! {
-    impl #impl_generics Isomorphism for #name #ty_generics #where_clause {
-      fn title(&self) -> &str {
-        match self {
-          #quoted_title
+            quote! {
+              (#quoted)
+            }
         }
-      }
-      fn list() -> Vec<Self> {
-        vec![#quoted_list]
-      }
-    }
-  });
+        Fields::Unit => TokenStream::new(),
+    };
 
-  Ok(quoted.into())
+    quoted
+}
+
+fn variant_matching_format(type_name: &Ident, variant: &syn::Variant) -> TokenStream {
+
+    let variant_name = &variant.ident;
+
+    match &variant.fields {
+        Fields::Named(_) => quote! { #type_name :: #variant_name {..} },
+        Fields::Unnamed(_) => quote! { #type_name :: #variant_name(..) },
+        Fields::Unit => quote! { #type_name :: #variant_name },
+    }
+}
+
+/// Parse attribute of a field or a variant.
+fn get_attribute<'a>(attrs: &'a [syn::Attribute], path: &str) -> Option<&'a syn::Attribute> {
+    attrs.iter().find(|attr| attr.path().is_ident(path))
 }

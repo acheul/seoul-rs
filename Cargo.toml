@@ -1,5 +1,13 @@
 [workspace]
-resolver = "2"
-members = [ "expand",
-  "seoul", "seoul-derive"
+resolver = "3"
+members = [ 
+    "seoul", 
+    "seoul-derive"
 ]
+exclude = ["expand"]
+
+[workspace.package]
+version = "1.0.0"
+
+[workspace.dependencies]
+seoul-derive = { path="seoul-derive", version = "1.0.0" }
