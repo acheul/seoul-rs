@@ -1,5 +1,3 @@
-#![doc = include_str!("../../README.md")]
-
 pub use seoul_derive::{Isomorphism, Reflica};
 
 pub trait Isomorphism: Sized { }
