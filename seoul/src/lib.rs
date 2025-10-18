@@ -1,13 +1,6 @@
-//! SEOUL-RS
+#![doc = include_str!("../../README.md")]
 
-mod isomorphism;
-pub use isomorphism::Isomorphism;
+pub use seoul_derive::{Isomorphism, Reflica};
 
-mod tuplike;
-pub use tuplike::Tuplike;
-
-mod reflica;
-pub use reflica::Reflica;
-
-mod intowrap;
-pub use intowrap::IntoWrap;
+pub trait Isomorphism: Sized { }
+pub trait Reflica: Sized { }
